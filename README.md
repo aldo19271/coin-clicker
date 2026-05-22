@@ -44,7 +44,7 @@ Game memiliki beberapa skin:
 ## ▶️ Mainkan Game
 
 Play here:  
-[aldo19271.github.io](https://reference-url-citation.invalid/0)
+https://aldo19271.github.io/coin-clicker/
 
 ## 👑 Credit
 
