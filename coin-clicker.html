@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gold Coin Clicker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#FFD700;--gold2:#FFA500;--gold3:#B8860B;--gold4:#8B6914;
+  --panel:rgba(20,13,3,0.92);
+  --font-d:'Cinzel Decorative',cursive;--font-b:'Cinzel',serif;
+}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:radial-gradient(ellipse at 30% 20%,#1c1005 0%,#0a0806 65%);
+  font-family:var(--font-b);color:#e8d5a0;
+  display:flex;flex-direction:column;align-items:center;
+  height:100vh;overflow:hidden;position:relative;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+
+/* TACOS RAIN BG */
+body.tacos-mode{
+  background:radial-gradient(ellipse at 30% 20%,#3a1a00 0%,#1a0800 65%);
+  animation:tacos-bg-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes tacos-bg-pulse{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(20deg) brightness(1.1)}}
+
+/* DUST */
+.dust{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.dust span{position:absolute;border-radius:50%;background:var(--gold);opacity:0;animation:drift linear infinite;}
+@keyframes drift{0%{transform:translateY(100vh) translateX(0);opacity:0}10%{opacity:.5}90%{opacity:.2}100%{transform:translateY(-10vh) translateX(20px);opacity:0}}
+
+/* TACOS RAIN EMOJIS */
+.taco-fall{
+  position:fixed;top:-60px;font-size:2rem;pointer-events:none;z-index:50;
+  animation:taco-drop linear forwards;
+}
+@keyframes taco-drop{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(360deg);opacity:.5}}
+
+/* NAV TABS */
+.nav{
+  position:relative;z-index:10;
+  display:flex;gap:4px;padding:8px 8px 0;
+  width:100%;max-width:480px;
+}
+.nav-btn{
+  flex:1;padding:8px 4px;border:1px solid var(--gold3);border-bottom:none;
+  border-radius:10px 10px 0 0;background:rgba(10,8,6,0.8);
+  color:var(--gold3);font-family:var(--font-b);font-size:.65rem;
+  letter-spacing:.1em;cursor:pointer;transition:all .2s;text-transform:uppercase;
+}
+.nav-btn.active{background:var(--panel);color:var(--gold);border-color:var(--gold);}
+.nav-btn:hover:not(.active){background:rgba(30,20,5,0.9);color:var(--gold2);}
+
+/* PAGES */
+.page{display:none;flex-direction:column;align-items:center;width:100%;max-width:480px;
+  position:relative;z-index:1;flex:1;overflow-y:auto;overflow-x:hidden;
+  background:var(--panel);border:1px solid var(--gold3);border-radius:0 0 16px 16px;
+  padding-bottom:12px;
+}
+.page.active{display:flex;}
+
+/* SCOREBOARD */
+.scoreboard{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px 6px;border-bottom:1px solid rgba(184,134,11,.3);
+}
+.score-main{text-align:center;flex:1;}
+.score-label{font-size:.55rem;letter-spacing:.25em;color:var(--gold3);text-transform:uppercase;}
+.score-value{font-family:var(--font-d);font-size:clamp(1.6rem,6vw,2.4rem);color:var(--gold);
+  text-shadow:0 0 20px rgba(255,215,0,.5);line-height:1.1;transition:transform .1s;}
+.score-value.bump{transform:scale(1.12);}
+.side-stat{text-align:center;min-width:60px;}
+.side-stat .sl{font-size:.5rem;letter-spacing:.15em;color:var(--gold3);text-transform:uppercase;}
+.side-stat .sv{font-family:var(--font-d);font-size:.9rem;color:var(--gold2);}
+
+/* EVENT BANNER */
+.event-banner{
+  width:100%;min-height:32px;display:flex;align-items:center;justify-content:center;
+  padding:4px 12px;font-size:.7rem;letter-spacing:.12em;text-align:center;
+  font-weight:600;transition:all .3s;position:relative;overflow:hidden;
+}
+.event-banner.hidden{visibility:hidden;}
+.event-banner::before{
+  content:'';position:absolute;inset:0;
+  animation:shimmer 1.5s linear infinite;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.1) 50%,transparent 100%);
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.event-banner .bar{position:absolute;bottom:0;left:0;height:3px;background:currentColor;transition:width .1s linear;opacity:.7;}
+.ev-double{background:rgba(255,68,102,.15);color:#ff6688;border-bottom:1px solid #ff446633;}
+.ev-jackpot{background:rgba(204,68,255,.2);color:#ee88ff;border-bottom:1px solid #cc44ff44;}
+.ev-frenzy{background:rgba(255,165,0,.15);color:#ffaa22;border-bottom:1px solid #ffa50033;}
+.ev-rush{background:rgba(68,255,170,.15);color:#44ffaa;border-bottom:1px solid #44ffaa33;}
+.ev-tacos{background:rgba(255,140,0,.25);color:#ffcc44;border-bottom:1px solid #ffaa0055;
+  animation:tacos-banner 0.5s ease-in-out infinite alternate;}
+@keyframes tacos-banner{0%{background:rgba(255,140,0,.25)}100%{background:rgba(255,80,0,.35)}}
+
+/* COIN AREA */
+.coin-area{
+  display:flex;flex-direction:column;align-items:center;
+  padding:12px 0 6px;position:relative;flex:1;justify-content:center;
+}
+.glow-ring{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,200,0,.2) 0%,transparent 70%);
+  animation:pulse-ring 2s ease-in-out infinite;pointer-events:none;
+  width:clamp(170px,45vw,200px);height:clamp(170px,45vw,200px);
+}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.1);opacity:1}}
+.glow-ring.tacos-glow{
+  background:radial-gradient(circle,rgba(255,140,0,.35) 0%,transparent 70%);
+  animation:pulse-ring 0.4s ease-in-out infinite;
+}
+.coin{
+  width:clamp(140px,40vw,175px);height:clamp(140px,40vw,175px);
+  border-radius:50%;position:relative;cursor:pointer;
+  transition:transform .08s ease;flex-shrink:0;
+}
+.coin:active{transform:scale(.91);}
+.coin svg{width:100%;height:100%;
+  filter:drop-shadow(0 6px 20px rgba(255,165,0,.55)) drop-shadow(0 0 40px rgba(255,215,0,.25));
+  transition:filter .15s ease;}
+.coin:hover svg{filter:drop-shadow(0 8px 28px rgba(255,165,0,.8)) drop-shadow(0 0 55px rgba(255,215,0,.5));}
+.coin-spin{animation:cspin .35s ease;}
+@keyframes cspin{0%{transform:rotateY(0)}40%{transform:rotateY(70deg)}70%{transform:rotateY(20deg)}100%{transform:rotateY(0)}}
+/* Tacos bounce on coin */
+.coin.tacos-shake{animation:tshake 0.3s ease-in-out infinite;}
+@keyframes tshake{0%,100%{transform:rotate(-3deg) scale(1.02)}50%{transform:rotate(3deg) scale(.98)}}
+
+.hint-click{font-size:.55rem;letter-spacing:.2em;color:var(--gold3);text-transform:uppercase;
+  margin-top:6px;animation:blink 1.8s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+.per-click-badge{
+  background:rgba(184,134,11,.2);border:1px solid var(--gold3);border-radius:20px;
+  padding:3px 14px;font-size:.6rem;letter-spacing:.15em;color:var(--gold2);margin-top:2px;
+}
+.per-click-badge.tacos-badge{
+  background:rgba(255,140,0,.25);border-color:#ffaa00;color:#ffcc44;
+  animation:tacos-badge-pulse .4s ease-in-out infinite alternate;
+}
+@keyframes tacos-badge-pulse{0%{box-shadow:0 0 0 rgba(255,140,0,0)}100%{box-shadow:0 0 12px rgba(255,140,0,.6)}}
+
+/* STATS ROW */
+.stats-row{display:flex;gap:8px;padding:6px 12px;width:100%;}
+.stat-box{
+  flex:1;background:rgba(10,8,6,.7);border:1px solid rgba(184,134,11,.3);
+  border-radius:10px;padding:7px 6px;text-align:center;
+}
+.stat-box .sl{font-size:.5rem;letter-spacing:.15em;color:var(--gold3);text-transform:uppercase;}
+.stat-box .sv{font-family:var(--font-d);font-size:.85rem;color:var(--gold2);}
+
+/* SHOP */
+.shop-header{padding:12px 16px 8px;width:100%;text-align:center;border-bottom:1px solid rgba(184,134,11,.3);}
+.shop-header h2{font-family:var(--font-d);font-size:1.1rem;color:var(--gold);}
+.shop-header p{font-size:.6rem;letter-spacing:.15em;color:var(--gold3);margin-top:2px;}
+.shop-balance{font-family:var(--font-d);font-size:1.4rem;color:var(--gold);text-shadow:0 0 15px rgba(255,215,0,.4);margin-top:4px;}
+.skin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px;width:100%;}
+.skin-card{
+  background:rgba(10,8,6,.8);border:1px solid rgba(184,134,11,.3);
+  border-radius:12px;padding:12px 8px;text-align:center;
+  transition:all .25s;position:relative;overflow:hidden;
+}
+.skin-card.owned{border-color:var(--gold3);}
+.skin-card.equipped{border-color:var(--gold);box-shadow:0 0 18px rgba(255,215,0,.25);}
+.skin-card:hover{transform:translateY(-2px);border-color:var(--gold2);}
+.skin-preview{width:70px;height:70px;margin:0 auto 8px;}
+.skin-preview svg{width:100%;height:100%;}
+.skin-name{font-family:var(--font-d);font-size:.65rem;color:var(--gold);margin-bottom:4px;}
+.skin-desc{font-size:.52rem;color:var(--gold3);letter-spacing:.05em;margin-bottom:8px;min-height:22px;}
+.skin-badge{position:absolute;top:6px;right:6px;font-size:.48rem;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;font-weight:600;}
+.badge-owned{background:rgba(68,255,170,.15);color:#44ffaa;border:1px solid #44ffaa44;}
+.badge-equipped{background:rgba(255,215,0,.2);color:var(--gold);border:1px solid rgba(255,215,0,.4);}
+.skin-btn{width:100%;padding:6px 4px;border-radius:8px;font-family:var(--font-b);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:none;}
+.skin-btn.buy{background:linear-gradient(135deg,var(--gold3),var(--gold4));color:#FFF8DC;}
+.skin-btn.buy:hover{background:linear-gradient(135deg,var(--gold),var(--gold2));}
+.skin-btn.equip{background:rgba(255,215,0,.15);color:var(--gold);border:1px solid var(--gold3);}
+.skin-btn.equip:hover{background:rgba(255,215,0,.25);}
+.skin-btn.active-eq{background:rgba(68,255,170,.1);color:#44ffaa;border:1px solid #44ffaa44;cursor:default;}
+.skin-price{font-size:.6rem;color:var(--gold2);margin-bottom:5px;}
+.skin-price span{font-family:var(--font-d);}
+
+/* EVENTS PAGE */
+.events-list{padding:10px 12px;width:100%;display:flex;flex-direction:column;gap:8px;}
+.ev-card{background:rgba(10,8,6,.8);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;border:1px solid rgba(184,134,11,.25);}
+.ev-icon{font-size:1.6rem;flex-shrink:0;}
+.ev-title{font-family:var(--font-d);font-size:.75rem;color:var(--gold);margin-bottom:2px;}
+.ev-desc{font-size:.58rem;color:#a08060;letter-spacing:.05em;line-height:1.4;}
+.ev-chance{font-size:.55rem;color:var(--gold3);margin-top:3px;letter-spacing:.1em;}
+
+/* FLOAT TEXTS */
+.float-text{
+  position:fixed;font-family:var(--font-d);font-size:1.2rem;font-weight:700;
+  color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,.8);
+  pointer-events:none;z-index:9999;animation:float-up .9s ease forwards;
+}
+.float-text.double{color:#ff6688;text-shadow:0 0 12px rgba(255,68,102,.8);}
+.float-text.jackpot{color:#ee88ff;font-size:1.5rem;text-shadow:0 0 15px rgba(204,68,255,.9);}
+.float-text.frenzy{color:#ffaa22;}
+.float-text.rush{color:#44ffaa;}
+.float-text.tacos{color:#ffcc44;font-size:1.4rem;text-shadow:0 0 14px rgba(255,200,0,.9);}
+@keyframes float-up{0%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:1;transform:translateY(-55px) scale(1.1)}100%{opacity:0;transform:translateY(-90px) scale(.7)}}
+
+/* MILESTONE */
+.milestone{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:var(--font-d);font-size:clamp(1rem,5vw,2rem);
+  color:var(--gold);text-shadow:0 0 30px rgba(255,215,0,.9);
+  pointer-events:none;z-index:9999;animation:ms-pop 1.6s ease forwards;text-align:center;
+  background:rgba(10,8,4,.9);padding:12px 24px;border-radius:12px;
+  border:1px solid var(--gold);max-width:85vw;
+}
+@keyframes ms-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}70%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.9)}}
+
+/* NOTIF */
+.notif{
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(10,8,4,.95);border:1px solid currentColor;
+  border-radius:10px;padding:8px 16px;font-size:.65rem;letter-spacing:.1em;
+  z-index:9999;text-align:center;max-width:90vw;
+  animation:notif-in .3s ease,notif-out .3s ease 2.2s forwards;
+}
+@keyframes notif-in{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes notif-out{from{opacity:1}to{opacity:0}}
+
+/* RIPPLE */
+@keyframes ripple-out{0%{transform:scale(0);opacity:.8}100%{transform:scale(3);opacity:0}}
+.ripple{position:fixed;border-radius:50%;pointer-events:none;z-index:9998;width:60px;height:60px;margin-left:-30px;margin-top:-30px;border:2px solid var(--gold);animation:ripple-out .5s ease forwards;}
+
+/* scrollbar */
+.page::-webkit-scrollbar{width:4px;}
+.page::-webkit-scrollbar-track{background:transparent;}
+.page::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:2px;}
+
+/* MUTE BTN */
+.mute-btn{
+  position:fixed;bottom:14px;right:14px;z-index:100;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(20,13,3,.9);border:1px solid var(--gold3);
+  color:var(--gold);font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.mute-btn:hover{border-color:var(--gold);background:rgba(40,26,6,.95);}
+
+@media(max-height:600px){
+  .coin{width:120px;height:120px;}
+  .glow-ring{width:145px;height:145px;}
+  .scoreboard{padding:6px 12px 4px;}
+  .score-value{font-size:1.4rem;}
+  .stats-row{gap:5px;padding:4px 8px;}
+}
+</style>
+</head>
+<body>
+<div class="dust" id="dust"></div>
+
+<!-- MUTE BUTTON -->
+<button class="mute-btn" id="muteBtn" onclick="toggleMute()" title="Toggle suara">🔊</button>
+
+<!-- NAV -->
+<div class="nav" style="margin-top:8px;">
+  <button class="nav-btn active" onclick="showPage('game',this)">🪙 Game</button>
+  <button class="nav-btn" onclick="showPage('shop',this)">🛒 Shop</button>
+  <button class="nav-btn" onclick="showPage('events',this)">⚡ Events</button>
+</div>
+
+<!-- GAME PAGE -->
+<div class="page active" id="page-game">
+  <div class="scoreboard">
+    <div class="side-stat">
+      <div class="sl">Level</div>
+      <div class="sv" id="lvlDisp">1</div>
+    </div>
+    <div class="score-main">
+      <div class="score-label">Koin Terkumpul</div>
+      <div class="score-value" id="scoreDisp">0</div>
+    </div>
+    <div class="side-stat">
+      <div class="sl">Terbaik</div>
+      <div class="sv" id="bestDisp">0</div>
+    </div>
+  </div>
+  <div class="event-banner hidden" id="evBanner">
+    <div class="bar" id="evBar" style="width:100%"></div>
+    <span id="evText"></span>
+  </div>
+  <div class="coin-area">
+    <div class="glow-ring" id="glowRing"></div>
+    <div class="coin" id="coinBtn" onclick="handleClick(event)">
+      <svg id="coinSVG" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="hint-click" id="hintClick">Tap untuk koin!</div>
+    <div class="per-click-badge" id="perClickBadge">+<span id="perClickDisp">1</span> per klik</div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="sl">Klik</div>
+      <div class="sv" id="clickDisp">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="sl">Combo</div>
+      <div class="sv" id="comboDisp">x1</div>
+    </div>
+    <div class="stat-box">
+      <div class="sl">Skin</div>
+      <div class="sv" id="skinDisp">Gold</div>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP PAGE -->
+<div class="page" id="page-shop">
+  <div class="shop-header">
+    <h2>✦ Coin Shop ✦</h2>
+    <p>Beli skin eksklusif dengan koin kamu</p>
+    <div class="shop-balance" id="shopBalance">0</div>
+  </div>
+  <div class="skin-grid" id="skinGrid"></div>
+</div>
+
+<!-- EVENTS PAGE -->
+<div class="page" id="page-events">
+  <div class="shop-header">
+    <h2>⚡ Random Events</h2>
+    <p>Events muncul secara acak saat klik</p>
+  </div>
+  <div class="events-list">
+    <div class="ev-card"><div class="ev-icon">💥</div><div class="ev-info"><div class="ev-title">DOUBLE COINS</div><div class="ev-desc">Semua koin x2 selama 10 detik!</div><div class="ev-chance">⚀ Chance: 10%</div></div></div>
+    <div class="ev-card"><div class="ev-icon">🎰</div><div class="ev-info"><div class="ev-title">JACKPOT</div><div class="ev-desc">Dapat koin x10 untuk SATU klik!</div><div class="ev-chance">⚀ Chance: 3%</div></div></div>
+    <div class="ev-card"><div class="ev-icon">🔥</div><div class="ev-info"><div class="ev-title">FRENZY MODE</div><div class="ev-desc">Setiap klik x3 selama 7 detik!</div><div class="ev-chance">⚀ Chance: 5%</div></div></div>
+    <div class="ev-card"><div class="ev-icon">✨</div><div class="ev-info"><div class="ev-title">GOLDEN RAIN</div><div class="ev-desc">Hujan koin otomatis selama 8 detik!</div><div class="ev-chance">⚀ Chance: 7%</div></div></div>
+    <div class="ev-card"><div class="ev-icon">⚡</div><div class="ev-info"><div class="ev-title">COMBO CHAIN</div><div class="ev-desc">Klik cepat → x2→x3→x5 burst!</div><div class="ev-chance">⚀ Otomatis dari klik cepat</div></div></div>
+    <div class="ev-card"><div class="ev-icon">🌮</div><div class="ev-info"><div class="ev-title">TACOS RAIN!</div><div class="ev-desc">Hujan taco dari langit! Tombol jadi +50 selama 25 detik. Lagu taco ikut bunyi!</div><div class="ev-chance">⚀ Chance: 5%</div></div></div>
+    <div class="ev-card"><div class="ev-icon">🌙</div><div class="ev-info"><div class="ev-title">MIDNIGHT BONUS</div><div class="ev-desc">Malam hari (20:00–06:00) semua koin +50%!</div><div class="ev-chance">⚀ Otomatis sesuai jam lokal</div></div></div>
+  </div>
+</div>
+
+<script>
+// ====================================================
+// AUDIO ENGINE (Web Audio API)
+// ====================================================
+let audioCtx = null;
+let muted = false;
+
+function getAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration, vol=0.3, decay=true){
+  if(muted) return;
+  try{
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    if(decay) gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  }catch(e){}
+}
+
+function playChord(freqs, type='sine', dur=0.18, vol=0.15){
+  freqs.forEach((f,i) => setTimeout(()=>playTone(f,type,dur,vol),i*30));
+}
+
+// Sound effects
+function sfxCoin(){
+  // bright coin ping
+  playTone(880,'sine',0.08,0.25);
+  setTimeout(()=>playTone(1320,'sine',0.06,0.15),40);
+}
+function sfxUI(){
+  // soft click
+  playTone(440,'sine',0.06,0.12);
+}
+function sfxDouble(){
+  playChord([523,659,784],'sine',0.25,0.2);
+}
+function sfxJackpot(){
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.3,0.25),i*80));
+}
+function sfxFrenzy(){
+  playTone(200,'sawtooth',0.1,0.2);
+  setTimeout(()=>playTone(300,'sawtooth',0.1,0.2),60);
+  setTimeout(()=>playTone(400,'sawtooth',0.12,0.2),120);
+}
+function sfxRush(){
+  playChord([392,494,587],'triangle',0.3,0.18);
+}
+function sfxMilestone(){
+  [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.4,0.22),i*70));
+}
+function sfxCombo(){
+  playTone(660,'square',0.08,0.15);
+  setTimeout(()=>playTone(880,'square',0.1,0.18),50);
+}
+function sfxBuy(){
+  [392,523,659].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.2,0.2),i*60));
+}
+
+// TACOS RAIN MUSIC — a silly repeating melody
+let tacosIntervalId = null;
+let tacosMelody = [
+  [523,0.12],[587,0.12],[659,0.12],[698,0.18],
+  [659,0.12],[587,0.12],[523,0.25],[0,0.12],
+  [392,0.12],[440,0.12],[523,0.12],[587,0.18],
+  [523,0.12],[440,0.12],[392,0.25],[0,0.2],
+];
+let tacosNoteIdx = 0;
+
+function startTacosMusic(){
+  if(muted) return;
+  tacosNoteIdx = 0;
+  function playNext(){
+    if(tacosIntervalId === null) return;
+    const [freq, dur] = tacosMelody[tacosNoteIdx % tacosMelody.length];
+    if(freq > 0 && !muted) playTone(freq,'square',dur+0.05,0.18,true);
+    tacosNoteIdx++;
+    tacosIntervalId = setTimeout(playNext, (dur)*1000 + 30);
+  }
+  tacosIntervalId = setTimeout(playNext, 0);
+}
+function stopTacosMusic(){
+  if(tacosIntervalId !== null){ clearTimeout(tacosIntervalId); tacosIntervalId = null; }
+}
+
+function toggleMute(){
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+  if(muted) stopTacosMusic();
+  else if(activeEvent && activeEvent.type==='tacos') startTacosMusic();
+}
+
+// ====================================================
+// SKIN DEFINITIONS
+// ====================================================
+const SKINS = [
+  {
+    id:'gold',name:'Gold Classic',desc:'Koin emas murni legendaris',price:0,
+    glow:'rgba(255,165,0,.55)',ringColor:'rgba(255,200,0,.2)',
+    svgDefs:`<radialGradient id="cg0" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#FFF176"/><stop offset="25%" stop-color="#FFD700"/><stop offset="55%" stop-color="#FFA500"/><stop offset="80%" stop-color="#B8860B"/><stop offset="100%" stop-color="#8B6914"/></radialGradient><radialGradient id="cr0" cx="50%" cy="50%" r="50%"><stop offset="85%" stop-color="#B8860B"/><stop offset="100%" stop-color="#6B4F10"/></radialGradient><radialGradient id="ci0" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="#FFEE88"/><stop offset="40%" stop-color="#FFD700"/><stop offset="100%" stop-color="#CC8800"/></radialGradient>`,
+    svgBody:`<circle cx="80" cy="83" r="72" fill="rgba(0,0,0,.35)"/><circle cx="80" cy="80" r="72" fill="url(#cr0)"/><circle cx="80" cy="80" r="72" fill="none" stroke="#FFE566" stroke-width="2.5" opacity=".5"/><circle cx="80" cy="80" r="66" fill="none" stroke="#8B6914" stroke-width="2" opacity=".6"/><circle cx="80" cy="80" r="63" fill="url(#cg0)"/><circle cx="80" cy="80" r="55" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/><circle cx="80" cy="80" r="52" fill="url(#ci0)"/><text x="80" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#8B6914" opacity=".22">Rp</text><text x="80" y="71" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#FFE566">Rp</text><text x="80" y="102" text-anchor="middle" font-family="serif" font-size="10" fill="#B8860B" opacity=".7">✦ ✦ ✦</text><ellipse cx="62" cy="55" rx="16" ry="9" fill="rgba(255,255,255,.22)" transform="rotate(-30 62 55)"/><ellipse cx="55" cy="50" rx="6" ry="3.5" fill="rgba(255,255,255,.35)" transform="rotate(-30 55 50)"/>`
+  },
+  {
+    id:'silver',name:'Silver Moon',desc:'Perak murni saat purnama',price:500,
+    glow:'rgba(180,200,220,.5)',ringColor:'rgba(180,220,255,.18)',
+    svgDefs:`<radialGradient id="cg1" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#F0F8FF"/><stop offset="30%" stop-color="#C0D8E8"/><stop offset="60%" stop-color="#8BA8BB"/><stop offset="100%" stop-color="#5A7A8A"/></radialGradient><radialGradient id="cr1" cx="50%" cy="50%" r="50%"><stop offset="85%" stop-color="#607890"/><stop offset="100%" stop-color="#405060"/></radialGradient>`,
+    svgBody:`<circle cx="80" cy="83" r="72" fill="rgba(0,0,0,.35)"/><circle cx="80" cy="80" r="72" fill="url(#cr1)"/><circle cx="80" cy="80" r="72" fill="none" stroke="#D0E8F8" stroke-width="2" opacity=".6"/><circle cx="80" cy="80" r="66" fill="none" stroke="#607890" stroke-width="2" opacity=".5"/><circle cx="80" cy="80" r="63" fill="url(#cg1)"/><circle cx="80" cy="80" r="52" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="1"/><text x="80" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#405060" opacity=".3">☽</text><text x="80" y="71" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#E8F4FF">☽</text><text x="80" y="100" text-anchor="middle" font-family="serif" font-size="10" fill="#8BA8BB" opacity=".8">· · · · ·</text><ellipse cx="62" cy="54" rx="18" ry="9" fill="rgba(255,255,255,.28)" transform="rotate(-30 62 54)"/>`
+  },
+  {
+    id:'ruby',name:'Ruby Flame',desc:'Membara seperti api merah',price:1200,
+    glow:'rgba(255,50,50,.55)',ringColor:'rgba(255,50,50,.2)',
+    svgDefs:`<radialGradient id="cg2" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#FF9999"/><stop offset="30%" stop-color="#FF3344"/><stop offset="65%" stop-color="#CC1122"/><stop offset="100%" stop-color="#880011"/></radialGradient><radialGradient id="cr2" cx="50%" cy="50%" r="50%"><stop offset="85%" stop-color="#880011"/><stop offset="100%" stop-color="#550008"/></radialGradient>`,
+    svgBody:`<circle cx="80" cy="83" r="72" fill="rgba(0,0,0,.4)"/><circle cx="80" cy="80" r="72" fill="url(#cr2)"/><circle cx="80" cy="80" r="72" fill="none" stroke="#FF6677" stroke-width="2.5" opacity=".5"/><circle cx="80" cy="80" r="66" fill="none" stroke="#880011" stroke-width="2" opacity=".6"/><circle cx="80" cy="80" r="63" fill="url(#cg2)"/><circle cx="80" cy="80" r="52" fill="none" stroke="rgba(255,150,150,.2)" stroke-width="1.5"/><text x="80" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#550008" opacity=".3">♦</text><text x="80" y="71" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#FFAAAA">♦</text><text x="80" y="102" text-anchor="middle" font-family="serif" font-size="10" fill="#CC2233" opacity=".8">🔥 🔥 🔥</text><ellipse cx="62" cy="54" rx="16" ry="9" fill="rgba(255,200,200,.3)" transform="rotate(-30 62 54)"/>`
+  },
+  {
+    id:'emerald',name:'Emerald Forest',desc:'Hijau zamrud dari hutan abadi',price:1500,
+    glow:'rgba(50,200,100,.5)',ringColor:'rgba(50,200,100,.2)',
+    svgDefs:`<radialGradient id="cg3" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#AAFFCC"/><stop offset="30%" stop-color="#22CC66"/><stop offset="65%" stop-color="#118844"/><stop offset="100%" stop-color="#085520"/></radialGradient><radialGradient id="cr3" cx="50%" cy="50%" r="50%"><stop offset="85%" stop-color="#085520"/><stop offset="100%" stop-color="#043310"/></radialGradient>`,
+    svgBody:`<circle cx="80" cy="83" r="72" fill="rgba(0,0,0,.4)"/><circle cx="80" cy="80" r="72" fill="url(#cr3)"/><circle cx="80" cy="80" r="72" fill="none" stroke="#44FF88" stroke-width="2.5" opacity=".5"/><circle cx="80" cy="80" r="66" fill="none" stroke="#118844" stroke-width="2" opacity=".5"/><circle cx="80" cy="80" r="63" fill="url(#cg3)"/><circle cx="80" cy="80" r="52" fill="none" stroke="rgba(100,255,150,.2)" stroke-width="1.5"/><text x="80" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#043310" opacity=".3">♣</text><text x="80" y="71" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="#AAFFCC">♣</text><text x="80" y="102" text-anchor="middle" font-family="serif" font-size="10" fill="#22CC66" opacity=".8">🍃 🍃 🍃</text><ellipse cx="62" cy="54" rx="16" ry="9" fill="rgba(200,255,220,.3)" transform="rotate(-30 62 54)"/>`
+  },
+  {
+    id:'diamond',name:'Diamond Ice',desc:'Langka & dingin bak berlian',price:3000,
+    glow:'rgba(100,200,255,.5)',ringColor:'rgba(100,200,255,.2)',
+    svgDefs:`<radialGradient id="cg4" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#EEFFFF"/><stop offset="25%" stop-color="#AAEEFF"/><stop offset="55%" stop-color="#55AADD"/><stop offset="100%" stop-color="#2266AA"/></radialGradient><radialGradient id="cr4" cx="50%" cy="50%" r="50%"><stop offset="85%" stop-color="#2266AA"/><stop offset="100%" stop-color="#113366"/></radialGradient>`,
+    svgBody:`<circle cx="80" cy="83" r="72" fill="rgba(0,0,10,.45)"/><circle cx="80" cy="80" r="72" fill="url(#cr4)"/><circle cx="80" cy="80" r="72" fill="none" stroke="#88DDFF" stroke-width="2.5" opacity=".6"/><circle cx="80" cy="80" r="66" fill="none" stroke="#2266AA" stroke-width="2" opacity=".5"/><circle cx="80" cy="80" r="63" fill="url(#cg4)"/><circle cx="80" cy="80" r="52" fill="none" stroke="rgba(150,230,255,.25)" stroke-width="1.5"/><text x="80" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="30" font-weight="bold" fill="#113366" opacity=".3">💎</text><text x="80" y="71" text-anchor="middle" font-family="Georgia,serif" font-size="30" font-weight="bold" fill="#CCEEFF">💎</text><text x="80" y="102" text-anchor="middle" font-family="serif" font-size="10" fill="#55AADD" opacity=".8">❄ ❄ ❄</text><ellipse cx="62" cy="54" rx="18" ry="9" fill="rgba(200,240,255,.4)" transform="rotate(-30 62 54)"/><ellipse cx="55" cy="49" rx="7" ry="3" fill="rgba(255,255,255,.5)" transform="rotate(-30 55 49)"/>`
+  },
+  {
+    id:'cosmic',name:'Cosmic Void',desc:'Dari kedalaman galaksi',price:6000,
+    glow:'rgba(180,50,255,.5)',ringColor:'rgba(150,50,255,.25)',
+    svgDefs:`<radialGradient id="cg5" cx="38%" cy="35%" r="70%"><stop offset="0%" stop-color="#EE88FF"/><stop offset="20%" stop-color="#9933FF"/><stop offset="50%" stop-color="#5500CC"/><stop offset="80%" stop-color="#220066"/><stop offset="100%" stop-color="#0A0020"/></radialGradient><radialGradient id="cr5" cx="50%" cy="50%" r="50%"><stop offset="85%" stop-color="#220066"/><stop offset="100%" stop-color="#0A0020"/></radialGradient><radialGradient id="sg5" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,255,255,.15)"/><stop offset="100%" stop-color="transparent"/></radialGradient>`,
+    svgBody:`<circle cx="80" cy="83" r="72" fill="rgba(0,0,10,.5)"/><circle cx="80" cy="80" r="72" fill="url(#cr5)"/><circle cx="80" cy="80" r="72" fill="none" stroke="#CC66FF" stroke-width="2.5" opacity=".5"/><circle cx="80" cy="80" r="66" fill="none" stroke="#5500CC" stroke-width="2" opacity=".5"/><circle cx="80" cy="80" r="63" fill="url(#cg5)"/><circle cx="80" cy="80" r="63" fill="url(#sg5)"/><circle cx="80" cy="80" r="52" fill="none" stroke="rgba(200,150,255,.2)" stroke-width="1.5"/><text x="80" y="71" text-anchor="middle" font-family="Georgia,serif" font-size="30" fill="#EECCFF">✦</text><circle cx="50" cy="55" r="1.5" fill="white" opacity=".9"/><circle cx="110" cy="62" r="1" fill="white" opacity=".8"/><circle cx="95" cy="45" r="1.5" fill="#CC99FF" opacity=".9"/><circle cx="60" cy="100" r="1" fill="white" opacity=".7"/><circle cx="105" cy="100" r="1.5" fill="#9966FF" opacity=".8"/><text x="80" y="102" text-anchor="middle" font-family="serif" font-size="10" fill="#9933FF" opacity=".9">🌌 ✦ 🌌</text><ellipse cx="62" cy="54" rx="16" ry="9" fill="rgba(220,180,255,.25)" transform="rotate(-30 62 54)"/>`
+  }
+];
+
+// ====================================================
+// STATE
+// ====================================================
+let score    = +load('gc_score',0);
+let clicks   = +load('gc_clicks',0);
+let best     = +load('gc_best',0);
+let ownedS   = loadJson('gc_owned',['gold']);
+let equipped = load('gc_skin','gold');
+
+let perClick=1, combo=1, comboTimer=null, comboCount=0, lastClickTime=0;
+let activeEvent=null, evTimer=null;
+
+function midnightBonus(){ const h=new Date().getHours(); return(h>=20||h<6)?1.5:1; }
+function load(k,def){ const v=localStorage.getItem(k); return v!==null?v:def; }
+function loadJson(k,def){ try{return JSON.parse(localStorage.getItem(k))||def;}catch{return def;} }
+function save(){
+  localStorage.setItem('gc_score',score);
+  localStorage.setItem('gc_clicks',clicks);
+  localStorage.setItem('gc_best',best);
+  localStorage.setItem('gc_owned',JSON.stringify(ownedS));
+  localStorage.setItem('gc_skin',equipped);
+}
+function getLevel(){ return Math.floor(score/100)+1; }
+function calcPerClick(lvl){ return Math.max(1,Math.floor(lvl/3)); }
+
+// ====================================================
+// RENDER COIN
+// ====================================================
+function renderCoin(skinId){
+  const s=SKINS.find(x=>x.id===skinId)||SKINS[0];
+  const svg=document.getElementById('coinSVG');
+  svg.innerHTML=`<defs><filter id="emboss"><feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/><feOffset dx="1" dy="2" result="off"/><feComposite in="SourceGraphic" in2="off" operator="over"/></filter><filter id="glowF"><feGaussianBlur stdDeviation="3" result="cb"/><feMerge><feMergeNode in="cb"/><feMergeNode in="SourceGraphic"/></feMerge></filter>${s.svgDefs}</defs>${s.svgBody}`;
+  document.getElementById('glowRing').style.background=`radial-gradient(circle,${s.ringColor} 0%,transparent 70%)`;
+  svg.style.filter=`drop-shadow(0 6px 20px ${s.glow}) drop-shadow(0 0 40px ${s.ringColor})`;
+}
+
+// ====================================================
+// TACOS RAIN FX
+// ====================================================
+let tacoFallInterval = null;
+function startTacoFall(){
+  tacoFallInterval = setInterval(()=>{
+    const el = document.createElement('div');
+    el.className = 'taco-fall';
+    el.textContent = ['🌮','🌮','🌮','🌯','🫔'][Math.floor(Math.random()*5)];
+    el.style.left = Math.random()*100+'vw';
+    const dur = 1.5 + Math.random()*2;
+    el.style.animationDuration = dur+'s';
+    el.style.fontSize = (1.2+Math.random()*1.5)+'rem';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), dur*1000+200);
+  }, 300);
+}
+function stopTacoFall(){
+  if(tacoFallInterval){ clearInterval(tacoFallInterval); tacoFallInterval=null; }
+  document.querySelectorAll('.taco-fall').forEach(e=>e.remove());
+}
+
+// ====================================================
+// EVENTS
+// ====================================================
+const EVENTS_DEF = [
+  {type:'double', label:'💥 DOUBLE COINS! x2 selama 10 detik!', cls:'ev-double', duration:10000, mult:2},
+  {type:'jackpot',label:'🎰 JACKPOT! x10 untuk klik ini!',      cls:'ev-jackpot',duration:0,     mult:10},
+  {type:'frenzy', label:'🔥 FRENZY MODE! x3 selama 7 detik!',  cls:'ev-frenzy', duration:7000,  mult:3},
+  {type:'rush',   label:'✨ GOLDEN RAIN! Koin otomatis 8 detik!',cls:'ev-rush',  duration:8000,  mult:1},
+  {type:'tacos',  label:'🌮 TACOS RAIN! +50 per klik! 25 detik!',cls:'ev-tacos', duration:25000, mult:1},
+];
+
+function rollEvent(){
+  if(activeEvent) return null;
+  const r=Math.random();
+  if(r<0.03)  return EVENTS_DEF[1]; // jackpot 3%
+  if(r<0.13)  return EVENTS_DEF[0]; // double 10%
+  if(r<0.18)  return EVENTS_DEF[2]; // frenzy 5%
+  if(r<0.25)  return EVENTS_DEF[3]; // rush 7%
+  if(r<0.30)  return EVENTS_DEF[4]; // tacos 5%
+  return null;
+}
+
+function triggerEvent(ev){
+  activeEvent={type:ev.type, mult:ev.mult};
+  const banner=document.getElementById('evBanner');
+  const bar=document.getElementById('evBar');
+  const txt=document.getElementById('evText');
+  banner.className='event-banner '+ev.cls;
+  txt.textContent=ev.label;
+  bar.style.width='100%';
+
+  // Play event SFX
+  if(ev.type==='double')  sfxDouble();
+  if(ev.type==='jackpot') sfxJackpot();
+  if(ev.type==='frenzy')  sfxFrenzy();
+  if(ev.type==='rush')    sfxRush();
+  if(ev.type==='tacos'){  sfxFrenzy(); startTacosMusic(); startTacoFall();
+    document.body.classList.add('tacos-mode');
+    document.getElementById('coinBtn').classList.add('tacos-shake');
+    document.getElementById('glowRing').classList.add('tacos-glow');
+    document.getElementById('perClickBadge').classList.add('tacos-badge');
+    document.getElementById('perClickDisp').textContent='50';
+  }
+
+  showNotif(ev.label, ev.cls);
+
+  if(ev.type==='jackpot'){
+    setTimeout(()=>{ activeEvent=null; banner.className='event-banner hidden'; },1500);
+    return;
+  }
+
+  if(ev.type==='rush'){
+    const ri=setInterval(()=>{
+      const earned=Math.round(perClick*midnightBonus()*combo);
+      score+=earned; best=Math.max(best,score);
+      spawnFloatCenter('+'+earned,'rush');
+      render();
+    },500);
+    activeEvent.intervalId=ri;
+  }
+
+  const start=Date.now();
+  evTimer=setInterval(()=>{
+    const elapsed=Date.now()-start;
+    bar.style.width=Math.max(0,(1-elapsed/ev.duration)*100)+'%';
+    if(elapsed>=ev.duration) endEvent();
+  },100);
+}
+
+function endEvent(){
+  if(evTimer){clearInterval(evTimer);evTimer=null;}
+  if(activeEvent&&activeEvent.intervalId) clearInterval(activeEvent.intervalId);
+  const wasTacos = activeEvent && activeEvent.type==='tacos';
+  activeEvent=null;
+  document.getElementById('evBanner').className='event-banner hidden';
+  if(wasTacos){
+    stopTacosMusic(); stopTacoFall();
+    document.body.classList.remove('tacos-mode');
+    document.getElementById('coinBtn').classList.remove('tacos-shake');
+    document.getElementById('glowRing').classList.remove('tacos-glow');
+    document.getElementById('perClickBadge').classList.remove('tacos-badge');
+    renderCoin(equipped); // restore coin glow
+  }
+}
+
+// ====================================================
+// COMBO
+// ====================================================
+function updateCombo(){
+  const now=Date.now();
+  if(now-lastClickTime<600){
+    comboCount++;
+    if(comboCount>=10){ combo=5; showNotif('⚡ COMBO x5 CHAIN!','ev-frenzy'); sfxCombo(); comboCount=0; }
+    else if(comboCount>=6) combo=3;
+    else if(comboCount>=3) combo=2;
+    else combo=1;
+  } else { comboCount=1; combo=1; }
+  lastClickTime=now;
+  clearTimeout(comboTimer);
+  comboTimer=setTimeout(()=>{combo=1;comboCount=0;render();},1200);
+}
+
+// ====================================================
+// HANDLE CLICK
+// ====================================================
+function handleClick(e){
+  e.preventDefault();
+  // Init audio on first user gesture
+  getAudio();
+
+  const lvl=getLevel();
+  perClick=calcPerClick(lvl);
+  updateCombo();
+
+  const ev=rollEvent();
+  if(ev) triggerEvent(ev);
+
+  let mult=combo*midnightBonus();
+  let label='+', cls='';
+
+  if(activeEvent){
+    if(activeEvent.type==='tacos'){
+      // TACOS: flat +50
+      score+=50; clicks++; best=Math.max(best,score);
+      sfxCoin();
+      spawnFloat(e,'🌮 +50','tacos');
+      // coin spin
+      const coin=document.getElementById('coinBtn');
+      coin.classList.remove('coin-spin');void coin.offsetWidth;coin.classList.add('coin-spin');
+      setTimeout(()=>coin.classList.remove('coin-spin'),360);
+      checkMilestone(); render(); save(); return;
+    }
+    if(activeEvent.type==='jackpot'){ mult*=10; label='🎰 +'; cls='jackpot'; }
+    else if(activeEvent.type==='double'){ mult*=2; label='💥 +'; cls='double'; }
+    else if(activeEvent.type==='frenzy'){ mult*=3; label='🔥 +'; cls='frenzy'; }
+  }
+
+  const earned=Math.round(perClick*mult);
+  score+=earned; clicks++; best=Math.max(best,score);
+
+  sfxCoin();
+
+  // Bump score
+  const sv=document.getElementById('scoreDisp');
+  sv.classList.remove('bump');void sv.offsetWidth;sv.classList.add('bump');
+  setTimeout(()=>sv.classList.remove('bump'),120);
+
+  // Coin spin
+  const coin=document.getElementById('coinBtn');
+  coin.classList.remove('coin-spin');void coin.offsetWidth;coin.classList.add('coin-spin');
+  setTimeout(()=>coin.classList.remove('coin-spin'),360);
+
+  spawnFloat(e,label+earned.toLocaleString('id-ID'),cls);
+  if(activeEvent&&activeEvent.type==='frenzy') spawnRipple(e);
+
+  checkMilestone(); render(); save();
+}
+
+// ====================================================
+// RENDER UI
+// ====================================================
+const milestones=[10,50,100,250,500,1000,2500,5000,10000,25000,50000,100000];
+let nextMs=milestones.findIndex(m=>m>score); if(nextMs===-1)nextMs=milestones.length;
+
+function checkMilestone(){
+  if(nextMs<milestones.length&&score>=milestones[nextMs]){
+    showMilestone('🏆 '+milestones[nextMs].toLocaleString('id-ID')+' Koin!');
+    sfxMilestone();
+    nextMs++;
+  }
+}
+
+function render(){
+  const lvl=getLevel();
+  if(!activeEvent||activeEvent.type!=='tacos') perClick=calcPerClick(lvl);
+  const mid=midnightBonus()>1?' 🌙':'';
+  document.getElementById('scoreDisp').textContent=score.toLocaleString('id-ID');
+  document.getElementById('clickDisp').textContent=clicks.toLocaleString('id-ID');
+  document.getElementById('bestDisp').textContent=best.toLocaleString('id-ID');
+  document.getElementById('lvlDisp').textContent=lvl;
+  if(!activeEvent||activeEvent.type!=='tacos')
+    document.getElementById('perClickDisp').textContent=perClick+mid;
+  document.getElementById('comboDisp').textContent='x'+combo;
+  document.getElementById('skinDisp').textContent=SKINS.find(s=>s.id===equipped)?.name.split(' ')[0]||'Gold';
+  const sb=document.getElementById('shopBalance');
+  if(sb) sb.textContent='🪙 '+score.toLocaleString('id-ID')+' koin';
+}
+
+// ====================================================
+// SHOP
+// ====================================================
+function renderShop(){
+  const grid=document.getElementById('skinGrid');
+  grid.innerHTML='';
+  SKINS.forEach(s=>{
+    const isOwned=ownedS.includes(s.id), isEquipped=equipped===s.id;
+    const card=document.createElement('div');
+    card.className='skin-card'+(isOwned?' owned':'')+(isEquipped?' equipped':'');
+    let badgeHTML=isEquipped?'<div class="skin-badge badge-equipped">✓ Equipped</div>':
+      isOwned?'<div class="skin-badge badge-owned">Owned</div>':'';
+    let btnHTML=isEquipped?'<button class="skin-btn active-eq" disabled>Dipakai ✓</button>':
+      isOwned?`<button class="skin-btn equip" onclick="equipSkin('${s.id}')">Pakai</button>`:
+      `<div class="skin-price">Harga: <span>${s.price.toLocaleString('id-ID')}</span> 🪙</div>
+       <button class="skin-btn buy" onclick="buySkin('${s.id}')">Beli</button>`;
+    card.innerHTML=`${badgeHTML}
+      <div class="skin-preview"><svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+        <defs>${s.svgDefs}</defs>${s.svgBody}</svg></div>
+      <div class="skin-name">${s.name}</div>
+      <div class="skin-desc">${s.desc}</div>${btnHTML}`;
+    grid.appendChild(card);
+  });
+}
+
+function buySkin(id){
+  sfxUI();
+  const s=SKINS.find(x=>x.id===id);
+  if(!s||ownedS.includes(id)) return;
+  if(score<s.price){ showNotif('❌ Koin tidak cukup! Butuh '+s.price.toLocaleString('id-ID')+' 🪙','ev-double'); return; }
+  score-=s.price; ownedS.push(id); equipped=id;
+  sfxBuy();
+  renderCoin(id); save(); render(); renderShop();
+  showNotif('✅ '+s.name+' berhasil dibeli & dipakai!','ev-rush');
+}
+
+function equipSkin(id){
+  sfxUI();
+  equipped=id; renderCoin(id); save(); render(); renderShop();
+  showNotif('✨ '+SKINS.find(s=>s.id===id)?.name+' dipakai!','ev-rush');
+}
+
+// ====================================================
+// FX HELPERS
+// ====================================================
+function spawnFloat(e,text,cls){
+  const el=document.createElement('div');
+  el.className='float-text'+(cls?' '+cls:'');
+  el.textContent=text;
+  const x=(e.clientX||window.innerWidth/2)-20+(Math.random()*40-20);
+  const y=(e.clientY||window.innerHeight/2)-10;
+  el.style.cssText=`left:${x}px;top:${y}px;`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),920);
+}
+function spawnFloatCenter(text,cls){
+  const el=document.createElement('div');
+  el.className='float-text'+(cls?' '+cls:'');
+  el.textContent=text;
+  el.style.cssText=`left:${40+Math.random()*20}%;top:${30+Math.random()*20}%;`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),920);
+}
+function spawnRipple(e){
+  const el=document.createElement('div');
+  el.className='ripple';
+  el.style.cssText=`left:${e.clientX||window.innerWidth/2}px;top:${e.clientY||window.innerHeight/2}px;`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),500);
+}
+function showMilestone(msg){
+  const el=document.createElement('div');el.className='milestone';el.textContent=msg;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),1600);
+}
+function showNotif(msg,cls){
+  const el=document.createElement('div');el.className='notif';
+  el.style.color=cls==='ev-double'?'#ff6688':cls==='ev-rush'?'#44ffaa':cls==='ev-frenzy'?'#ffaa22':cls==='ev-tacos'?'#ffcc44':'#ee88ff';
+  el.style.borderColor='currentColor';el.textContent=msg;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),2600);
+}
+
+// ====================================================
+// NAV
+// ====================================================
+function showPage(id,btn){
+  sfxUI();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='shop'){renderShop();render();}
+}
+
+// ====================================================
+// DUST PARTICLES
+// ====================================================
+(function(){
+  const d=document.getElementById('dust');
+  for(let i=0;i<20;i++){
+    const s=document.createElement('span');
+    const x=Math.random()*100,dur=8+Math.random()*12,delay=Math.random()*15,sz=1.5+Math.random()*2;
+    s.style.cssText=`left:${x}%;width:${sz}px;height:${sz}px;animation-duration:${dur}s;animation-delay:-${delay}s;`;
+    d.appendChild(s);
+  }
+})();
+
+// ====================================================
+// INIT
+// ====================================================
+renderCoin(equipped);
+render();
+</script>
+</body>
+</html>
